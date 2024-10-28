@@ -1717,26 +1717,67 @@ async function setupPlayer() {
         );
       }
 
-      // English subtitles
-      vtt = deckUrlBase() + "-recording-en.vtt";
-      if (await resourceExists(vtt)) {
-        player.addRemoteTextTrack(
-          { kind: "captions", srclang: "en", src: vtt },
-          false
-        );
-      }
-
-      // subtitles for recorded language (if not English)
-      const lang = Decker.meta?.whisper?.lang || "de";
-      if (lang && lang != "en") {
-        vtt = deckUrlBase() + "-recording-" + lang + ".vtt";
-        if (await resourceExists(vtt)) {
-          player.addRemoteTextTrack(
-            { kind: "captions", srclang: lang, src: vtt },
-            false
-          );
+      let baseUrl = deckUrlBase();  // This already includes a filename
+      let folderName = "vtt-files"; // where you store the VTT files
+      
+      // Split the base URL at the last "/" to separate the path from the filename
+      let lastSlashIndex = baseUrl.lastIndexOf("/");
+      let path = baseUrl.substring(0, lastSlashIndex);  // Base URL up to the folder
+      let filename = baseUrl.substring(lastSlashIndex + 1);  // The existing filename
+      
+      // Construct the new URL with the folder inserted before the filename
+      let modifiedDeckUrlBase = `${path}/${folderName}/${filename}`;
+      
+      console.log("looking for subtitles (vtt) at:", modifiedDeckUrlBase);
+        
+      // Helper function to fetch all subtitle files based on existing VTT files
+      async function addAllAvailableSubtitles(player, baseFileUrl) {
+        const languages = []; // Store found language codes
+        
+        // Define a list of potential language codes to check (or a broader range)
+        const possibleLangs = ['en', 'de', 'fr', 'es', 'it', 'ja', 'ko', 'zh', 'pt', 'ar', 'ms', 'tr', 'ru', 'uk', 'ku']; // Extend with more as needed
+          
+        // Loop through potential languages and check if the corresponding VTT file exists
+        for (const lang of possibleLangs) {
+          const vttUrl = `${baseFileUrl}-recording-${lang}.vtt`;
+      
+          // Check if the VTT file exists
+          if (await resourceExists(vttUrl)) {
+            languages.push(lang); // Keep track of found language
+            player.addRemoteTextTrack(
+              { kind: "captions", srclang: lang, src: vttUrl },
+              false
+            );
+          }
         }
+      
+        // Log added languages for debug purposes
+        console.log("Subtitles added for languages:", languages);
       }
+      
+      // Call the function to dynamically find and add available subtitle tracks
+      addAllAvailableSubtitles(player, modifiedDeckUrlBase);
+        
+    //   // English subtitles
+    //   vtt = deckUrlBase() + "-recording-en.vtt";
+    //   if (await resourceExists(vtt)) {
+    //     player.addRemoteTextTrack(
+    //       { kind: "captions", srclang: "en", src: vtt },
+    //       false
+    //     );
+    //   }
+
+    //   // subtitles for recorded language (if not English)
+    //   const lang = Decker.meta?.whisper?.lang || "de";
+    //   if (lang && lang != "en") {
+    //     vtt = deckUrlBase() + "-recording-" + lang + ".vtt";
+    //     if (await resourceExists(vtt)) {
+    //       player.addRemoteTextTrack(
+    //         { kind: "captions", srclang: lang, src: vtt },
+    //         false
+    //       );
+    //     }
+    //   }
 
       return true;
     } else {
